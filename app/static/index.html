@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hunyuan I2V Pod UI</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --muted: #94a3b8;
+      --text: #e5e7eb;
+      --accent: #22d3ee;
+      --accent-2: #38bdf8;
+      --danger: #f87171;
+      --ok: #34d399;
+      --border: #1f2937;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at 10% 0%, #111827, var(--bg) 45%);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 920px;
+      margin: 32px auto;
+      padding: 0 16px;
+    }
+    .card {
+      background: linear-gradient(180deg, #111827, #0b1220);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+    }
+    h1 { margin: 0 0 6px; font-size: 24px; }
+    p { margin: 0 0 18px; color: var(--muted); }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .row { margin-bottom: 12px; }
+    label {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 6px;
+      color: #cbd5e1;
+    }
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea,
+    input[type="file"] {
+      width: 100%;
+      background: #0b1220;
+      color: var(--text);
+      border: 1px solid #263246;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 14px;
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #cbd5e1;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .primary {
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      color: #00131c;
+    }
+    .ghost {
+      background: #101a2d;
+      color: var(--text);
+      border: 1px solid #243145;
+    }
+    .status {
+      margin-top: 18px;
+      border: 1px solid #243145;
+      border-radius: 12px;
+      padding: 12px;
+      background: #0a1120;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .ok { color: var(--ok); }
+    .err { color: var(--danger); }
+    video {
+      width: 100%;
+      margin-top: 16px;
+      border-radius: 12px;
+      border: 1px solid #263246;
+      background: black;
+    }
+    .download {
+      margin-top: 10px;
+      display: inline-block;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    @media (max-width: 760px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>HunyuanVideo I2V</h1>
+      <p>Upload image, generate video, and preview directly in browser.</p>
+
+      <form id="gen-form">
+        <div class="row">
+          <label for="image">Input image</label>
+          <input id="image" name="image" type="file" accept=".jpg,.jpeg,.png,.webp" required />
+        </div>
+
+        <div class="row">
+          <label for="prompt">Prompt</label>
+          <textarea id="prompt" name="prompt" placeholder="cinematic close-up, natural movement, realistic lighting" required></textarea>
+        </div>
+
+        <div class="grid">
+          <div class="row">
+            <label for="resolution">Resolution</label>
+            <select id="resolution" name="resolution">
+              <option value="720p" selected>720p</option>
+              <option value="540p">540p</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <label for="infer_steps">Infer steps</label>
+            <input id="infer_steps" name="infer_steps" type="number" min="10" max="120" value="50" />
+          </div>
+
+          <div class="row">
+            <label for="video_length">Video length (frames)</label>
+            <input id="video_length" name="video_length" type="number" min="17" max="257" value="129" />
+          </div>
+
+          <div class="row">
+            <label for="seed">Seed</label>
+            <input id="seed" name="seed" type="number" value="0" />
+          </div>
+        </div>
+
+        <div class="row check">
+          <input id="stable_mode" name="stable_mode" type="checkbox" checked />
+          <label for="stable_mode" style="margin: 0;">Stable mode (recommended)</label>
+        </div>
+
+        <div class="actions">
+          <button class="primary" type="submit">Generate Video</button>
+          <button class="ghost" type="button" id="reset-btn">Reset</button>
+        </div>
+      </form>
+
+      <div id="status" class="status">Ready.</div>
+      <video id="preview" controls style="display:none;"></video>
+      <a id="download" class="download" style="display:none;" download>Download video</a>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('gen-form');
+    const statusBox = document.getElementById('status');
+    const preview = document.getElementById('preview');
+    const download = document.getElementById('download');
+    const resetBtn = document.getElementById('reset-btn');
+
+    let pollTimer = null;
+
+    function setStatus(text, kind = '') {
+      statusBox.textContent = text;
+      statusBox.classList.remove('ok', 'err');
+      if (kind) statusBox.classList.add(kind);
+    }
+
+    function clearOutput() {
+      preview.style.display = 'none';
+      preview.removeAttribute('src');
+      download.style.display = 'none';
+      download.removeAttribute('href');
+    }
+
+    async function pollJob(jobId) {
+      if (pollTimer) clearInterval(pollTimer);
+
+      pollTimer = setInterval(async () => {
+        try {
+          const res = await fetch(`/v1/jobs/${jobId}`);
+          const job = await res.json();
+
+          if (!res.ok) {
+            clearInterval(pollTimer);
+            setStatus(`Failed to fetch job: ${JSON.stringify(job)}`, 'err');
+            return;
+          }
+
+          setStatus(`Job ${job.job_id}\nStatus: ${job.status}` + (job.error ? `\nError: ${job.error}` : ''));
+
+          if (job.status === 'succeeded') {
+            clearInterval(pollTimer);
+            const resultUrl = `/v1/jobs/${jobId}/result`;
+            preview.src = resultUrl;
+            preview.style.display = 'block';
+            download.href = resultUrl;
+            download.textContent = 'Download generated video';
+            download.style.display = 'inline-block';
+            setStatus(`Job ${job.job_id}\nStatus: ${job.status}`, 'ok');
+          }
+
+          if (job.status === 'failed') {
+            clearInterval(pollTimer);
+            setStatus(`Job ${job.job_id}\nStatus: failed\nError: ${job.error || 'Unknown error'}`, 'err');
+          }
+        } catch (err) {
+          clearInterval(pollTimer);
+          setStatus(`Polling error: ${err.message}`, 'err');
+        }
+      }, 4000);
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearOutput();
+
+      const image = document.getElementById('image').files[0];
+      const prompt = document.getElementById('prompt').value.trim();
+      const inferSteps = parseInt(document.getElementById('infer_steps').value, 10);
+      const videoLength = parseInt(document.getElementById('video_length').value, 10);
+      const seed = parseInt(document.getElementById('seed').value, 10);
+      const resolution = document.getElementById('resolution').value;
+      const stableMode = document.getElementById('stable_mode').checked;
+
+      if (!image) {
+        setStatus('Please select an image file.', 'err');
+        return;
+      }
+      if (!prompt) {
+        setStatus('Please enter a prompt.', 'err');
+        return;
+      }
+
+      const params = {
+        resolution,
+        infer_steps: inferSteps,
+        video_length: videoLength,
+        seed,
+        stable_mode: stableMode,
+      };
+
+      const body = new FormData();
+      body.append('image', image);
+      body.append('prompt', prompt);
+      body.append('params', JSON.stringify(params));
+
+      setStatus('Submitting job...');
+
+      try {
+        const res = await fetch('/v1/jobs', { method: 'POST', body });
+        const data = await res.json();
+
+        if (!res.ok) {
+          setStatus(`Job creation failed: ${JSON.stringify(data)}`, 'err');
+          return;
+        }
+
+        setStatus(`Job ${data.job_id}\nStatus: ${data.status}`);
+        pollJob(data.job_id);
+      } catch (err) {
+        setStatus(`Request error: ${err.message}`, 'err');
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      form.reset();
+      clearOutput();
+      if (pollTimer) clearInterval(pollTimer);
+      setStatus('Ready.');
+    });
+  </script>
+</body>
+</html>
