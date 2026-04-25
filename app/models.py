@@ -29,7 +29,7 @@ class JobDetail(BaseModel):
 
 
 class InferenceParams(BaseModel):
-    prompt: str = Field(..., min_length=1, max_length=2000)
+    prompt: str = Field(default="", min_length=0, max_length=2000)
     model: str = "HYVideo-T/2"
     resolution: str = "720p"
     infer_steps: int = Field(default=50, ge=1, le=200)

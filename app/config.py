@@ -24,6 +24,7 @@ class Settings:
     default_embedded_cfg_scale: float = float(os.getenv("DEFAULT_EMBEDDED_CFG_SCALE", "6.0"))
     default_flow_shift_stable: float = float(os.getenv("DEFAULT_FLOW_SHIFT_STABLE", "7.0"))
     default_flow_shift_dynamic: float = float(os.getenv("DEFAULT_FLOW_SHIFT_DYNAMIC", "17.0"))
+    attn_mode: str = os.getenv("ATTN_MODE", "torch").lower()
 
     mock_mode: bool = os.getenv("MOCK_MODE", "false").lower() in {"1", "true", "yes", "on"}
 

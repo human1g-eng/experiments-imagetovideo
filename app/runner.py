@@ -12,6 +12,27 @@ class RunnerError(RuntimeError):
     pass
 
 
+def _ensure_attention_mode(repo_dir: Path, mode: str) -> None:
+    # HunyuanVideo-I2V may fail when flash-attn is unavailable on some pods.
+    # For "torch" mode we patch the default in-source attention mode.
+    if mode not in {"flash", "torch"}:
+        raise RunnerError(f"Invalid ATTN_MODE: {mode}. Use 'flash' or 'torch'.")
+    if mode != "torch":
+        return
+
+    attn_file = repo_dir / "hyvideo" / "modules" / "attenion.py"
+    if not attn_file.exists():
+        raise RunnerError(f"Could not find attention module: {attn_file}")
+
+    text = attn_file.read_text()
+    if 'mode="torch"' in text:
+        return
+    updated = text.replace('mode="flash"', 'mode="torch"', 1)
+    if updated == text:
+        raise RunnerError("Could not patch attention mode in attenion.py")
+    attn_file.write_text(updated)
+
+
 def _run_cmd(cmd: list[str], cwd: Path | None = None) -> None:
     try:
         subprocess.run(cmd, cwd=str(cwd) if cwd else None, check=True)
@@ -52,6 +73,8 @@ def run_hunyuan_i2v(image_path: Path, output_path: Path, params: InferenceParams
         raise RunnerError(
             f"Could not find {sample_script}. Clone Tencent-Hunyuan/HunyuanVideo-I2V in HUNYUAN_REPO_DIR."
         )
+
+    _ensure_attention_mode(settings.hunyuan_repo_dir, settings.attn_mode)
 
     cmd = [
         settings.hunyuan_python,

@@ -57,6 +57,12 @@ cd /workspace/hunyuan_i2v_pod
 MOCK_MODE=true HOST=0.0.0.0 PORT=8000 ./scripts/start.sh
 ```
 
+Recommended for most RunPod images (avoids flash-attn build dependency):
+
+```bash
+ATTN_MODE=torch HOST=0.0.0.0 PORT=8000 ./scripts/start.sh
+```
+
 Open UI in browser:
 
 ```bash

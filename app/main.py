@@ -61,9 +61,9 @@ def health() -> dict[str, str | bool]:
     }
 
 
-@app.get("/", response_class=HTMLResponse)
-@app.get("/ui", response_class=HTMLResponse)
-def ui() -> HTMLResponse | FileResponse:
+@app.get("/", response_class=HTMLResponse, response_model=None)
+@app.get("/ui", response_class=HTMLResponse, response_model=None)
+def ui():
     if not ui_file.exists():
         return HTMLResponse("UI file not found. Expected app/static/index.html", status_code=404)
     return FileResponse(ui_file)
