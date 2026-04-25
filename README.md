@@ -37,6 +37,11 @@ cd /workspace/hunyuan_i2v_pod
 ./scripts/runpod_bootstrap.sh
 ```
 
+The bootstrap script applies compatibility pins for Hunyuan I2V:
+- `transformers==4.46.3`
+- `tokenizers==0.20.3`
+- `huggingface_hub==0.25.2`
+
 Then place model checkpoints in:
 
 ```bash
@@ -61,6 +66,14 @@ Recommended for most RunPod images (avoids flash-attn build dependency):
 
 ```bash
 ATTN_MODE=torch HOST=0.0.0.0 PORT=8000 ./scripts/start.sh
+```
+
+If your pod has `/workspace` quota pressure, move caches out of `/workspace` before starting:
+
+```bash
+export HF_HOME=/dev/shm/hf-home
+unset TRANSFORMERS_CACHE
+unset HF_HUB_ENABLE_HF_TRANSFER
 ```
 
 Open UI in browser:

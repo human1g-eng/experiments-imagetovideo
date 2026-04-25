@@ -20,7 +20,11 @@ python3 -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt
 
 cd "${HUNYUAN_REPO_DIR}"
+# Resolve known dependency conflicts on newer pod images.
+sed -i 's/^tokenizers==0.15.0$/tokenizers==0.21.0/' requirements.txt || true
+sed -i 's/^pandas==2.0.3$/pandas==2.2.2/' requirements.txt || true
 python3 -m pip install -r requirements.txt
+python3 -m pip install "transformers==4.46.3" "tokenizers==0.20.3" "huggingface_hub==0.25.2"
 
 cat <<EOT
 Bootstrap done.
