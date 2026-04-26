@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wan2.1 I2V UI</title>
+<style>
+body{font-family:Arial,sans-serif;background:#0b1220;color:#e5e7eb;max-width:900px;margin:20px auto;padding:0 14px}
+.card{background:#121a2a;padding:16px;border-radius:10px;border:1px solid #293042}
+input,textarea,select,button{width:100%;margin:6px 0 12px;padding:10px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#e5e7eb}
+button{background:#0ea5e9;color:#00131f;font-weight:700;cursor:pointer}
+video{width:100%;margin-top:16px;border-radius:8px}
+pre{white-space:pre-wrap;background:#0f172a;padding:10px;border-radius:8px}
+</style></head><body>
+<div class="card">
+<h2>Wan2.1 Image to Video</h2>
+<input id="image" type="file" accept=".jpg,.jpeg,.png,.webp" />
+<textarea id="prompt" placeholder="Cinematic prompt"></textarea>
+<select id="size"><option value="1280*720">720p</option><option value="832*480">480p (faster)</option></select>
+<input id="seed" type="number" value="0" />
+<button id="run">Generate</button>
+<pre id="status">Ready.</pre>
+<video id="video" controls style="display:none"></video>
+<a id="dl" style="display:none;color:#38bdf8" download>Download</a>
+</div>
+<script>
+const runBtn=document.getElementById('run'); const status=document.getElementById('status');
+const video=document.getElementById('video'); const dl=document.getElementById('dl');
+let timer=null;
+function setStatus(v){status.textContent=v}
+async function poll(id){ if(timer)clearInterval(timer); timer=setInterval(async()=>{
+ const r=await fetch(`/v1/jobs/${id}`); const j=await r.json(); setStatus(JSON.stringify(j,null,2));
+ if(j.status==='succeeded'){clearInterval(timer); const url=`/v1/jobs/${id}/result`;video.src=url;video.style.display='block';dl.href=url;dl.style.display='inline-block';dl.textContent='Download video';}
+ if(j.status==='failed'){clearInterval(timer);}
+},4000)}
+runBtn.onclick=async()=>{
+ const f=document.getElementById('image').files[0]; const prompt=document.getElementById('prompt').value.trim();
+ if(!f||!prompt){setStatus('Select image and prompt');return;}
+ const params={size:document.getElementById('size').value,seed:parseInt(document.getElementById('seed').value||'0',10)};
+ const fd=new FormData(); fd.append('image',f); fd.append('prompt',prompt); fd.append('params',JSON.stringify(params));
+ const r=await fetch('/v1/jobs',{method:'POST',body:fd}); const j=await r.json(); setStatus(JSON.stringify(j,null,2)); if(j.job_id)poll(j.job_id);
+};
+</script></body></html>
