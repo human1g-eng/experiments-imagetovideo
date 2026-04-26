@@ -16,7 +16,8 @@ Image-to-video API + simple UI for `Wan2.1`.
 cd /workspace/experiments-imagetovideo/wan21_i2v_pod
 ./scripts/runpod_bootstrap.sh
 
-huggingface-cli download Wan-AI/Wan2.1-I2V-14B-720P --local-dir /workspace/Wan2.1/Wan2.1-I2V-14B-720P
+# New HF CLI:
+hf download Wan-AI/Wan2.1-I2V-14B-720P --local-dir /workspace/Wan2.1/Wan2.1-I2V-14B-720P
 
 WAN_REPO_DIR=/workspace/Wan2.1 \
 WAN_CKPT_DIR=/workspace/Wan2.1/Wan2.1-I2V-14B-720P \
@@ -31,4 +32,6 @@ Open:
 
 - First run is slow due model load.
 - Use size `832*480` for faster testing.
+- If you get pod quota errors while downloading checkpoints, use `/dev/shm` for checkpoint path and set `WAN_CKPT_DIR` to that location.
+- `runpod_bootstrap.sh` patches Wan attention calls to use SDPA fallback when `flash_attn` is unavailable.
 - If official CLI changes, set extra flags in `WAN_EXTRA_ARGS`.
