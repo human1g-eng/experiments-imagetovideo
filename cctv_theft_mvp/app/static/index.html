@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CCTV Theft MVP</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --ink: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #22c55e;
+      --warn: #f59e0b;
+    }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 20% 0%, #1e293b 0%, var(--bg) 45%);
+      color: var(--ink);
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      min-height: 100vh;
+    }
+    .wrap {
+      max-width: 920px;
+      margin: 32px auto;
+      padding: 0 16px;
+    }
+    .card {
+      background: linear-gradient(180deg, #111827, #0b1221);
+      border: 1px solid #1f2937;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+    }
+    h1 { margin: 0 0 8px; font-size: 1.5rem; }
+    p { margin: 4px 0 12px; color: var(--muted); }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    input, button, textarea {
+      border-radius: 10px;
+      border: 1px solid #334155;
+      background: #0b1220;
+      color: var(--ink);
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+    input[type="file"] { width: 100%; }
+    textarea { width: 100%; min-height: 126px; }
+    button {
+      background: linear-gradient(90deg, #16a34a, #22c55e);
+      border: none;
+      color: #03210f;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .status {
+      margin-top: 10px;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 10px;
+      background: #0a1426;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #bfdbfe;
+      min-height: 48px;
+    }
+    .links a {
+      color: var(--accent);
+      margin-right: 16px;
+      text-decoration: none;
+    }
+    .note { color: var(--warn); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Jewelry CCTV Theft Analyzer (MVP)</h1>
+      <p>Upload one CCTV clip, run suspicious-behavior detection, then download annotated video + JSON report.</p>
+      <form id="jobForm">
+        <div class="row">
+          <input id="videoInput" type="file" accept="video/*" required />
+        </div>
+        <label for="paramsInput">Params JSON (optional)</label>
+        <textarea id="paramsInput" placeholder='{"detector_engine":"auto","process_every_n_frames":2,"counter_line_ratio":0.45,"dwell_seconds":10}'></textarea>
+        <div class="row">
+          <button type="submit">Analyze Video</button>
+        </div>
+      </form>
+      <p class="note">Tip: install `ultralytics` + `torch` in runtime for stronger person detection. Without it, app falls back to HOG detector.</p>
+      <div class="status" id="statusBox">Idle.</div>
+      <div class="links" id="resultLinks"></div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("jobForm");
+    const statusBox = document.getElementById("statusBox");
+    const resultLinks = document.getElementById("resultLinks");
+
+    function setStatus(text) {
+      statusBox.textContent = text;
+    }
+
+    async function poll(jobId) {
+      while (true) {
+        const r = await fetch(`/v1/jobs/${jobId}`);
+        if (!r.ok) {
+          setStatus(`Polling failed: ${r.status}`);
+          return;
+        }
+        const data = await r.json();
+        setStatus(JSON.stringify(data, null, 2));
+        if (data.status === "succeeded") {
+          resultLinks.innerHTML = `
+            <a href="/v1/jobs/${jobId}/result" target="_blank">Open Result Video</a>
+            <a href="/v1/jobs/${jobId}/report" target="_blank">Open JSON Report</a>
+          `;
+          return;
+        }
+        if (data.status === "failed") {
+          resultLinks.innerHTML = "";
+          return;
+        }
+        await new Promise((res) => setTimeout(res, 2500));
+      }
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      resultLinks.innerHTML = "";
+      const video = document.getElementById("videoInput").files[0];
+      if (!video) {
+        setStatus("Please select a video file.");
+        return;
+      }
+      const paramsRaw = document.getElementById("paramsInput").value.trim();
+      const formData = new FormData();
+      formData.append("video", video);
+      if (paramsRaw) {
+        try {
+          JSON.parse(paramsRaw);
+        } catch (err) {
+          setStatus(`Invalid JSON in params: ${err}`);
+          return;
+        }
+        formData.append("params", paramsRaw);
+      }
+      setStatus("Uploading...");
+      const resp = await fetch("/v1/jobs", { method: "POST", body: formData });
+      if (!resp.ok) {
+        setStatus(`Create job failed: ${resp.status} ${await resp.text()}`);
+        return;
+      }
+      const data = await resp.json();
+      setStatus(`Job created: ${data.job_id}\nStatus: ${data.status}`);
+      await poll(data.job_id);
+    });
+  </script>
+</body>
+</html>
+
